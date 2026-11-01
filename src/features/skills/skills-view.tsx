@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Controller, useForm } from "react-hook-form"
-import { MoreHorizontalIcon, PencilIcon, PlusIcon, SparklesIcon, Trash2Icon } from "lucide-react"
+import { ListPlusIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, SparklesIcon, Trash2Icon } from "lucide-react"
+import { toast } from "sonner"
 import { z } from "zod"
 import { cn } from "cn"
 
@@ -20,11 +21,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { proficiencyLabel, SKILL_GROUPS } from "@/lib/constants"
 import { skillService } from "@/lib/services"
 import { createCrudHooks } from "@/lib/store/crud-hooks"
+import { invalidateQueries } from "@/lib/store/query"
 import { QK, useSkills } from "@/lib/store/queries"
-import type { Skill } from "@/lib/types"
+import type { Skill, SkillGroup } from "@/lib/types"
 import { matchesQuery } from "@/lib/utils/format"
 import { zodResolver } from "@/lib/utils/zod-resolver"
 
@@ -55,6 +58,7 @@ export function SkillsView() {
   const remove = skillHooks.useDelete()
   const [query, setQuery] = useState("")
   const [creating, setCreating] = useState(false)
+  const [addingMany, setAddingMany] = useState(false)
   const [editing, setEditing] = useState<Skill | null>(null)
   const [deleting, setDeleting] = useState<Skill | null>(null)
 
@@ -71,9 +75,14 @@ export function SkillsView() {
         title="Skills"
         description={skills ? `${skills.length} skills tracked · ${expert} at expert level` : "Your technical skill inventory."}
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <PlusIcon /> Add skill
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setAddingMany(true)}>
+              <ListPlusIcon /> Add multiple skills
+            </Button>
+            <Button onClick={() => setCreating(true)}>
+              <PlusIcon /> Add skill
+            </Button>
+          </>
         }
       >
         <SearchInput value={query} onChange={setQuery} placeholder="Search skills…" />
@@ -103,7 +112,8 @@ export function SkillsView() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{skill.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {proficiencyLabel(skill.proficiency)} · {skill.years} yr{skill.years === 1 ? "" : "s"}
+                          {proficiencyLabel(skill.proficiency)}
+                          {skill.years > 0 && ` · ${skill.years} yr${skill.years === 1 ? "" : "s"}`}
                         </p>
                       </div>
                       <DropdownMenu>
@@ -132,6 +142,7 @@ export function SkillsView() {
       )}
 
       {creating && <SkillFormDialog open onOpenChange={setCreating} />}
+      {addingMany && <AddManySkillsDialog open onOpenChange={setAddingMany} existing={skills ?? []} />}
       {editing && <SkillFormDialog key={editing.id} open skill={editing} onOpenChange={(o) => !o && setEditing(null)} />}
       <ConfirmDialog
         open={!!deleting}
@@ -210,6 +221,120 @@ function SkillFormDialog({ open, onOpenChange, skill }: { open: boolean; onOpenC
           </Field>
         )}
       />
+    </FormDialog>
+  )
+}
+
+/* ------------------------------------------------------- several at once */
+
+/** Groups for common skills; anything else lands in Tools and can be moved with Edit. */
+const GROUP_HINTS: Array<[SkillGroup, RegExp]> = [
+  ["mobile", /react native|flutter|android|\bios\b|swift|kotlin|expo/],
+  ["frontend", /react|next|vue|angular|svelte|html|css|tailwind|redux|javascript|typescript|figma|webpack|vite/],
+  ["database", /sql|postgres|mongo|redis|dynamo|firestore|elastic|cassandra|prisma/],
+  ["cloud", /aws|azure|gcp|google cloud|lambda|serverless|kubernetes|docker|terraform|firebase|vercel/],
+  ["ai", /\bai\b|\bml\b|llm|machine learning|deep learning|pytorch|tensorflow|langchain|openai|nlp/],
+  ["backend", /node|express|nest|django|flask|fastapi|spring|java\b|python|\bgo\b|golang|rust|php|ruby|rails|\.net|c#|graphql|\brest\b|kafka|microservice/],
+]
+
+const groupFor = (name: string): SkillGroup => GROUP_HINTS.find(([, pattern]) => pattern.test(name.toLowerCase()))?.[0] ?? "tools"
+
+/** "React:3, Node.js, AWS: 2" → [{ name: "React", years: 3 }, { name: "Node.js" }, { name: "AWS", years: 2 }]. */
+function parseSkillList(text: string): Array<{ name: string; years?: number }> {
+  const seen = new Set<string>()
+  const skills: Array<{ name: string; years?: number }> = []
+  for (const part of text.split(/[,\n]/)) {
+    const [, rawName = "", rawYears] = part.match(/^\s*(.*?)\s*(?::\s*(\d{1,2}(?:\.\d)?)\s*(?:y|yr|yrs|years?)?)?\s*$/i) ?? []
+    const name = rawName.replace(/\s+/g, " ").slice(0, 100)
+    if (!name || seen.has(name.toLowerCase())) continue
+    seen.add(name.toLowerCase())
+    skills.push(rawYears === undefined ? { name } : { name, years: Math.min(60, Number(rawYears)) })
+  }
+  return skills
+}
+
+const manySchema = z.object({
+  names: z.string().refine((value) => parseSkillList(value).length > 0, "Add at least one skill"),
+  years: z.string().regex(/^(\d{1,2}(\.\d)?)?$/, "A number of years, like 3"),
+})
+
+type ManyValues = z.infer<typeof manySchema>
+
+/** Adds a comma-separated list in one go; skills you already have are skipped. */
+function AddManySkillsDialog({
+  open,
+  onOpenChange,
+  existing,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  existing: Skill[]
+}) {
+  const [pending, setPending] = useState(false)
+  const { register, handleSubmit, formState } = useForm<ManyValues>({
+    resolver: zodResolver(manySchema),
+    defaultValues: { names: "", years: "" },
+  })
+
+  const onSubmit = handleSubmit(async ({ names, years }) => {
+    const have = new Set(existing.map((skill) => skill.name.trim().toLowerCase()))
+    const parsed = parseSkillList(names)
+    const fresh = parsed.filter((skill) => !have.has(skill.name.toLowerCase()))
+    const skipped = parsed.length - fresh.length
+    if (!fresh.length) {
+      toast.info(skipped === 1 ? "You already have that skill" : "You already have all of those skills")
+      return
+    }
+    setPending(true)
+    const results = await Promise.allSettled(
+      fresh.map((skill) =>
+        skillService.create({
+          name: skill.name,
+          group: groupFor(skill.name),
+          proficiency: 60,
+          // No years given: saved as 0, which means "not set".
+          years: skill.years ?? (years ? Number(years) : 0),
+        }),
+      ),
+    )
+    setPending(false)
+    invalidateQueries(QK.skills)
+    const added = results.filter((r) => r.status === "fulfilled").length
+    const failed = results.length - added
+    if (added) {
+      toast.success(`Added ${added} skill${added === 1 ? "" : "s"}`, {
+        description: [skipped ? `${skipped} already in your list` : "", failed ? `${failed} couldn't be saved` : ""]
+          .filter(Boolean)
+          .join(" · ") || "Edit one to change its group or proficiency.",
+      })
+      if (!failed) onOpenChange(false)
+    } else {
+      toast.error("Couldn't add those skills")
+    }
+  })
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Add multiple skills"
+      description="Separate skills with commas. Add years after a colon if you like."
+      submitLabel="Add skills"
+      pending={pending}
+      onSubmit={onSubmit}
+      size="sm"
+    >
+      <Field label="Skills" htmlFor="sk-many" error={formState.errors.names?.message} hint="e.g. React:3, Node.js:2, AWS, PostgreSQL">
+        <Textarea id="sk-many" rows={4} autoFocus aria-invalid={!!formState.errors.names} {...register("names")} />
+      </Field>
+      <Field
+        label="Years of experience (optional)"
+        htmlFor="sk-many-years"
+        error={formState.errors.years?.message}
+        hint="Used for skills without their own years. Leave blank to save them without."
+      >
+        <Input id="sk-many-years" inputMode="decimal" placeholder="e.g. 2" {...register("years")} />
+      </Field>
     </FormDialog>
   )
 }
