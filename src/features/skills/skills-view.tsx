@@ -256,9 +256,13 @@ function parseSkillList(text: string): Array<{ name: string; years?: number }> {
 const manySchema = z.object({
   names: z.string().refine((value) => parseSkillList(value).length > 0, "Add at least one skill"),
   years: z.string().regex(/^(\d{1,2}(\.\d)?)?$/, "A number of years, like 3"),
+  /** "" guesses each skill's group from its name. */
+  group: z.union([z.literal(""), z.enum(["frontend", "backend", "mobile", "database", "cloud", "ai", "tools"])]),
 })
 
 type ManyValues = z.infer<typeof manySchema>
+
+const GROUP_CHOICES = [{ value: "", label: "Guess from each name" }, ...SKILL_GROUPS]
 
 /** Adds a comma-separated list in one go; skills you already have are skipped. */
 function AddManySkillsDialog({
@@ -271,12 +275,12 @@ function AddManySkillsDialog({
   existing: Skill[]
 }) {
   const [pending, setPending] = useState(false)
-  const { register, handleSubmit, formState } = useForm<ManyValues>({
+  const { register, control, handleSubmit, formState } = useForm<ManyValues>({
     resolver: zodResolver(manySchema),
-    defaultValues: { names: "", years: "" },
+    defaultValues: { names: "", years: "", group: "" },
   })
 
-  const onSubmit = handleSubmit(async ({ names, years }) => {
+  const onSubmit = handleSubmit(async ({ names, years, group }) => {
     const have = new Set(existing.map((skill) => skill.name.trim().toLowerCase()))
     const parsed = parseSkillList(names)
     const fresh = parsed.filter((skill) => !have.has(skill.name.toLowerCase()))
@@ -290,7 +294,7 @@ function AddManySkillsDialog({
       fresh.map((skill) =>
         skillService.create({
           name: skill.name,
-          group: groupFor(skill.name),
+          group: group || groupFor(skill.name),
           proficiency: 60,
           // No years given: saved as 0, which means "not set".
           years: skill.years ?? (years ? Number(years) : 0),
@@ -326,6 +330,15 @@ function AddManySkillsDialog({
     >
       <Field label="Skills" htmlFor="sk-many" error={formState.errors.names?.message} hint="e.g. React:3, Node.js:2, AWS, PostgreSQL">
         <Textarea id="sk-many" rows={4} autoFocus aria-invalid={!!formState.errors.names} {...register("names")} />
+      </Field>
+      <Field label="Group" htmlFor="sk-many-group" hint="Pick one for all of them, or let each name decide (React → Frontend, AWS → Cloud…).">
+        <Controller
+          control={control}
+          name="group"
+          render={({ field }) => (
+            <SimpleSelect id="sk-many-group" value={field.value} onValueChange={field.onChange} options={GROUP_CHOICES} />
+          )}
+        />
       </Field>
       <Field
         label="Years of experience (optional)"
