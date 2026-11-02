@@ -45,7 +45,7 @@ export function seedPortfolio(): PortfolioContent {
         },
         {
           key: "Open source",
-          value: "2 agent skills published",
+          value: "4 agent skills published",
         },
       ],
       email: "ganeshguru8681@gmail.com",
@@ -270,8 +270,8 @@ export function seedPortfolio(): PortfolioContent {
         tagline: "Read the repo before you change it",
         description:
           "Stops an agent reaching for its favourite stack. It detects the languages, frameworks, database and test tooling from lockfiles and manifests, copies the conventions of the nearest existing feature, then makes the smallest change that fits — and verifies it with the project's own commands.",
-        repo: "https://github.com/Ganeshguru5/stack-aware-development",
-        install: "npx skills add Ganeshguru5/stack-aware-development",
+        repo: "https://github.com/GanezhHQ/stack-aware-development",
+        install: "npx skills add GanezhHQ/stack-aware-development",
         version: "1.0.0",
         license: "MIT",
         spec: [
@@ -299,8 +299,8 @@ export function seedPortfolio(): PortfolioContent {
         tagline: "Design the contract, then write the schema",
         description:
           "Treats a Zod schema as a runtime contract at a trust boundary, not a type echo. It finds the boundary, decides whether runtime validation is warranted at all, reads the repo's installed Zod version and existing conventions, then writes the schema, the inferred types, the integration and the tests.",
-        repo: "https://github.com/Ganeshguru5/zod-schema-architect",
-        install: "npx skills add Ganeshguru5/zod-schema-architect",
+        repo: "https://github.com/GanezhHQ/zod-schema-architect",
+        install: "npx skills add GanezhHQ/zod-schema-architect",
         version: "1.0.0",
         license: "MIT",
         spec: [
@@ -323,7 +323,81 @@ export function seedPortfolio(): PortfolioContent {
         ],
         tags: ["Agent Skills", "TypeScript", "Zod", "API design", "Evals"],
       },
+      {
+        name: "secure-api-architect",
+        tagline: "Trace every endpoint from route to SQL",
+        description:
+          "Makes an agent read the repo's real auth, tenancy and data-access code before it touches an API. It traces each endpoint from the route to the SQL to confirm the checks actually run, then applies only the OWASP API Top 10 and ASVS 5.0 controls that endpoint needs. It makes minimal fixes and proves them with allow-and-deny security tests.",
+        repo: "https://github.com/GanezhHQ/secure-api-architect",
+        install: "npx skills add GanezhHQ/secure-api-architect",
+        version: "1.0.0",
+        license: "MIT",
+        spec: [
+          { key: "Baseline", value: "OWASP API Top 10 · ASVS 5.0" },
+          { key: "References", value: "12 docs" },
+          { key: "Scanner", value: "21 unit tests" },
+          { key: "Evals", value: "7 behavioural cases" },
+        ],
+        tags: ["Agent Skills", "Python", "API security", "OWASP", "Evals"],
+      },
+      {
+        name: "unit-test-architect",
+        tagline: "A test that can't fail isn't evidence",
+        description:
+          "Makes an agent write unit tests worth keeping. It detects the repo's existing runner and conventions (Jest, Vitest, node:test, Mocha or Bun) and designs a risk-based test matrix. It mocks only external boundaries, checks that every test can fail, runs them, and reports real pass/fail results. It also flags requests that really need an integration test.",
+        repo: "https://github.com/GanezhHQ/unit-test-architect",
+        install: "npx skills add GanezhHQ/unit-test-architect",
+        version: "1.0.0",
+        license: "MIT",
+        spec: [
+          { key: "Runners", value: "5 detected" },
+          { key: "References", value: "4 docs" },
+          { key: "Example tests", value: "29 passing" },
+          { key: "Evals", value: "6 behavioural cases" },
+        ],
+        tags: ["Agent Skills", "Python", "Unit testing", "Jest", "Vitest"],
+      },
     ],
+    openSource: {
+      name: "GanezhHQ",
+      url: "https://github.com/GanezhHQ",
+      intro:
+        "GanezhHQ is my independent open-source engineering organisation, where I publish developer tools and AI-powered applications.",
+      repos: [
+        {
+          name: "iamcandidate",
+          description:
+            "The project's front door: what IamCandidate does, with links to the live app and its source.",
+          href: "https://github.com/GanezhHQ/iamcandidate",
+          language: "",
+          license: "",
+        },
+        {
+          name: "iamcandidate-ui",
+          description:
+            "The web app: applications, referrals, interviews, resumes and documents in one workspace.",
+          href: "https://github.com/GanezhHQ/iamcandidate-ui",
+          language: "TypeScript",
+          license: "",
+        },
+        {
+          name: "iamcandidate-server",
+          description:
+            "The API behind it: authentication, career data, documents and integrations.",
+          href: "https://github.com/GanezhHQ/iamcandidate-server",
+          language: "TypeScript",
+          license: "",
+        },
+        {
+          name: "iamcandidate-extension",
+          description:
+            "The browser extension that captures jobs and autofills applications.",
+          href: "https://github.com/GanezhHQ/iamcandidate-extension",
+          language: "JavaScript",
+          license: "",
+        },
+      ],
+    },
     toolkit: [
       {
         group: "Languages",

@@ -35,6 +35,7 @@ import type {
   PortfolioCardSpan,
   PortfolioContent,
   PortfolioExperience,
+  PortfolioOpenSourceRepo,
   PortfolioPair,
   PortfolioProfile,
   PortfolioProject,
@@ -98,6 +99,7 @@ function prepare(draft: PortfolioContent): PortfolioContent {
       spec: pairs(s.spec),
       tags: lines(s.tags),
     })),
+    openSource: draft.openSource,
     toolkit: draft.toolkit.map((g) => ({ ...g, items: lines(g.items) })),
     testimonials: draft.testimonials,
   }
@@ -115,6 +117,8 @@ function problems(draft: PortfolioContent): string[] {
   const slugs = prepare(draft).projects.map((p) => p.slug)
   if (new Set(slugs).size !== slugs.length) out.push("Projects: two projects have the same slug")
   draft.agentSkills.forEach((s, i) => !s.name.trim() && out.push(`Agent skill ${i + 1}: name is required`))
+  if (!draft.openSource.name.trim()) out.push("Open source: organisation name is required")
+  draft.openSource.repos.forEach((r, i) => !r.name.trim() && out.push(`Repository ${i + 1}: name is required`))
   draft.toolkit.forEach((g, i) => !g.group.trim() && out.push(`Toolkit group ${i + 1}: name is required`))
   draft.testimonials.forEach((t, i) => !t.name.trim() && out.push(`Reference ${i + 1}: name is required`))
   return out
@@ -139,7 +143,9 @@ export function PortfolioAdmin() {
       .get()
       .then((content) => {
         if (!active) return
-        const start = content ?? seedPortfolio()
+        const seed = seedPortfolio()
+        // Content saved before the Open source tab existed has no such section yet.
+        const start = content ? { ...content, openSource: content.openSource ?? seed.openSource } : seed
         setNeverSaved(!content)
         setSaved(start)
         setDraft(start)
@@ -251,6 +257,7 @@ export function PortfolioAdmin() {
               <TabsTrigger value="experience">Experience · {draft.experience.length}</TabsTrigger>
               <TabsTrigger value="projects">Projects · {draft.projects.length}</TabsTrigger>
               <TabsTrigger value="skills">Agent skills · {draft.agentSkills.length}</TabsTrigger>
+              <TabsTrigger value="open-source">Open source · {draft.openSource.repos.length}</TabsTrigger>
               <TabsTrigger value="toolkit">Toolkit · {draft.toolkit.length}</TabsTrigger>
               <TabsTrigger value="references">References · {draft.testimonials.length}</TabsTrigger>
             </TabsList>
@@ -321,6 +328,44 @@ export function PortfolioAdmin() {
                   tags: [],
                 })}
                 render={(s, update, id) => <SkillFields item={s} update={update} id={id} />}
+              />
+            </TabsContent>
+
+            <TabsContent value="open-source" className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TextField
+                  label="Organisation"
+                  id="open-source-name"
+                  value={draft.openSource.name}
+                  onChange={(name) => set("openSource", { ...draft.openSource, name })}
+                />
+                <TextField
+                  label="GitHub URL"
+                  id="open-source-url"
+                  value={draft.openSource.url}
+                  onChange={(url) => set("openSource", { ...draft.openSource, url })}
+                />
+                <TextField
+                  label="Intro"
+                  id="open-source-intro"
+                  multiline
+                  value={draft.openSource.intro}
+                  onChange={(intro) => set("openSource", { ...draft.openSource, intro })}
+                />
+              </div>
+              <ListEditor
+                items={draft.openSource.repos}
+                onChange={(repos) => set("openSource", { ...draft.openSource, repos })}
+                title={(r) => r.name}
+                addLabel="Add repository"
+                create={(): PortfolioOpenSourceRepo => ({
+                  name: "",
+                  description: "",
+                  href: "",
+                  language: "",
+                  license: "",
+                })}
+                render={(r, update, id) => <RepoFields item={r} update={update} id={id} />}
               />
             </TabsContent>
 
@@ -1014,6 +1059,38 @@ function SkillFields({
         ]}
       />
       <TagsField label="Tags" id={id("tags")} value={s.tags} onChange={(tags) => update({ tags })} />
+    </>
+  )
+}
+
+function RepoFields({
+  item: r,
+  update,
+  id,
+}: {
+  item: PortfolioOpenSourceRepo
+  update: Update<PortfolioOpenSourceRepo>
+  id: FieldId
+}) {
+  return (
+    <>
+      <TextField label="Name" id={id("name")} value={r.name} onChange={(name) => update({ name })} />
+      <TextField label="Repository URL" id={id("href")} value={r.href} onChange={(href) => update({ href })} />
+      <TextField
+        label="Description"
+        id={id("description")}
+        multiline
+        value={r.description}
+        onChange={(description) => update({ description })}
+      />
+      <TextField label="Language" id={id("language")} value={r.language} onChange={(language) => update({ language })} />
+      <TextField
+        label="License"
+        id={id("license")}
+        hint="Leave blank if the repository has no LICENSE file."
+        value={r.license}
+        onChange={(license) => update({ license })}
+      />
     </>
   )
 }

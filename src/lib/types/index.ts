@@ -995,6 +995,22 @@ export interface PortfolioAgentSkill {
   tags: string[]
 }
 
+export interface PortfolioOpenSourceRepo {
+  name: string
+  description: string
+  href: string
+  language: string
+  license: string
+}
+
+/** The GitHub organisation the site links to, and the repos listed beside the skills. */
+export interface PortfolioOpenSource {
+  name: string
+  url: string
+  intro: string
+  repos: PortfolioOpenSourceRepo[]
+}
+
 export interface PortfolioTestimonial {
   quote: string
   name: string
@@ -1017,6 +1033,7 @@ export interface PortfolioContent {
   experience: PortfolioExperience[]
   projects: PortfolioProject[]
   agentSkills: PortfolioAgentSkill[]
+  openSource: PortfolioOpenSource
   toolkit: Array<{ group: string; items: string[] }>
   testimonials: PortfolioTestimonial[]
   /** Set by "Sync to portfolio" on a resume; dropped once resumeUrl is edited by hand. */
