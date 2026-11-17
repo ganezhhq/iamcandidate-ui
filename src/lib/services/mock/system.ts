@@ -4,6 +4,7 @@ import type {
   Activity,
   AppUser,
   AutofillProfile,
+  CoreMailConfig,
   Integration,
   IntegrationId,
   NotificationPreferences,
@@ -17,6 +18,7 @@ import { createId } from "@/lib/utils/id"
 import type {
   ActivityService,
   AuthService,
+  CoreSettingsService,
   IntegrationService,
   SettingsService,
   UserService,
@@ -58,9 +60,52 @@ export class MockAuthService implements AuthService {
   async requestAccess(): Promise<void> {
     throw new Error(API_ONLY)
   }
+
+  async forgotPassword(): Promise<void> {
+    throw new Error(PASSWORD_RESET_API_ONLY)
+  }
+
+  async resetPassword(): Promise<void> {
+    throw new Error(PASSWORD_RESET_API_ONLY)
+  }
 }
 
 const API_ONLY = "User management needs the API backend (NEXT_PUBLIC_API_MODE=api)."
+const PASSWORD_RESET_API_ONLY = "Password reset isn't available in the demo. It needs the API backend."
+
+/** Mock mode: core settings live in memory only and no email is ever sent. */
+export class MockCoreSettingsService implements CoreSettingsService {
+  private mail: CoreMailConfig = {
+    host: "",
+    port: 587,
+    username: "",
+    password: "",
+    encryption: "tls",
+    senderName: "IamCandidate",
+    senderEmail: "",
+    appUrl: typeof window === "undefined" ? "" : window.location.origin,
+  }
+
+  async getMail(): Promise<CoreMailConfig> {
+    await networkDelay()
+    return this.mail
+  }
+
+  async saveMail(config: CoreMailConfig): Promise<CoreMailConfig> {
+    await networkDelay()
+    this.mail = { ...config }
+    return this.mail
+  }
+
+  async testMail(): Promise<{ ok: true; latencyMs: number }> {
+    await delay(700)
+    return { ok: true, latencyMs: 120 }
+  }
+
+  async sendTestMail(): Promise<void> {
+    throw new Error("No email is sent in the demo. Sending needs the API backend.")
+  }
+}
 
 /** Mock mode has a single demo account and no real user management. */
 export class MockUserService implements UserService {

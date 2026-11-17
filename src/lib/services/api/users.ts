@@ -3,13 +3,14 @@ import type {
   AccessRequest,
   AccessRequestInput,
   AppUser,
+  CoreMailConfig,
   CreateUserInput,
   ID,
   Session,
   UpdateUserInput,
 } from "@/lib/types"
 
-import type { AuthService, UserService } from "../contracts"
+import type { AuthService, CoreSettingsService, UserService } from "../contracts"
 
 const enc = encodeURIComponent
 
@@ -50,6 +51,44 @@ export class ApiAuthService implements AuthService {
 
   requestAccess(input: AccessRequestInput): Promise<void> {
     return apiClient.post("/access-requests", input)
+  }
+
+  forgotPassword(email: string): Promise<void> {
+    return apiClient.post("/auth/forgot-password", { email })
+  }
+
+  resetPassword(token: string, newPassword: string): Promise<void> {
+    return apiClient.post("/auth/reset-password", { token, newPassword })
+  }
+}
+
+/** Only the fields the API accepts (it rejects unknown ones). */
+const toCoreMailInput = ({ host, port, username, password, encryption, senderName, senderEmail, appUrl }: CoreMailConfig) => ({
+  host,
+  port,
+  username,
+  password,
+  encryption,
+  senderName,
+  senderEmail,
+  appUrl,
+})
+
+export class ApiCoreSettingsService implements CoreSettingsService {
+  getMail(): Promise<CoreMailConfig> {
+    return apiClient.get("/admin/core-settings/mail")
+  }
+
+  saveMail(config: CoreMailConfig): Promise<CoreMailConfig> {
+    return apiClient.put("/admin/core-settings/mail", toCoreMailInput(config))
+  }
+
+  testMail(config: CoreMailConfig): Promise<{ ok: true; latencyMs: number }> {
+    return apiClient.post("/admin/core-settings/mail/test", toCoreMailInput(config))
+  }
+
+  sendTestMail(to: string): Promise<void> {
+    return apiClient.post("/admin/core-settings/mail/send-test", { to })
   }
 }
 

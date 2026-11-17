@@ -34,7 +34,7 @@ import {
   ApiNotificationService,
   ApiSettingsService,
 } from "./api/system"
-import { ApiAuthService, ApiUserService } from "./api/users"
+import { ApiAuthService, ApiCoreSettingsService, ApiUserService } from "./api/users"
 import {
   ApiBoardService,
   ApiBookmarkService,
@@ -50,6 +50,7 @@ import type {
   AuthService,
   BoardService,
   BookmarkService,
+  CoreSettingsService,
   CertificationService,
   CompanyService,
   ContactService,
@@ -87,6 +88,7 @@ import { MockDashboardService, MockNotificationService } from "./mock/insights"
 import {
   MockActivityService,
   MockAuthService,
+  MockCoreSettingsService,
   MockIntegrationService,
   MockSettingsService,
   MockUserService,
@@ -130,6 +132,7 @@ export const notificationService: NotificationService = pick(() => new ApiNotifi
 export const settingsService: SettingsService = pick(() => new ApiSettingsService(), () => new MockSettingsService())
 export const authService: AuthService = pick(() => new ApiAuthService(), () => new MockAuthService())
 export const userService: UserService = pick(() => new ApiUserService(), () => new MockUserService())
+export const coreSettingsService: CoreSettingsService = pick(() => new ApiCoreSettingsService(), () => new MockCoreSettingsService())
 export const emailService: EmailService = pick(() => new ApiEmailService(), () => new MockEmailService())
 export const templateService: TemplateService = pick(() => new ApiTemplateService(), () => new MockTemplateService())
 export const smtpService: SmtpService = pick(() => new ApiSmtpService(), () => new MockSmtpService())

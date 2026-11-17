@@ -27,6 +27,7 @@ import type {
   Contact,
   ContactExtraction,
   ContactInput,
+  CoreMailConfig,
   CreateUserInput,
   DocumentFile,
   DocumentInput,
@@ -78,6 +79,19 @@ export interface AuthService {
   changePassword(currentPassword: string, newPassword: string): Promise<void>
   /** Public: asks the admin for an account. */
   requestAccess(input: AccessRequestInput): Promise<void>
+  /** Public: emails a reset link if the address has an account (resolves either way). */
+  forgotPassword(email: string): Promise<void>
+  /** Public: sets a new password with the token from the reset email. */
+  resetPassword(token: string, newPassword: string): Promise<void>
+}
+
+/** Admin-only, deployment-wide settings (Core settings). */
+export interface CoreSettingsService {
+  getMail(): Promise<CoreMailConfig>
+  saveMail(config: CoreMailConfig): Promise<CoreMailConfig>
+  testMail(config: CoreMailConfig): Promise<{ ok: true; latencyMs: number }>
+  /** Sends a real message with the saved settings. */
+  sendTestMail(to: string): Promise<void>
 }
 
 /** Admin-only account management (API mode). */

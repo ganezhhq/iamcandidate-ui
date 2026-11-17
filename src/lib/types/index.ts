@@ -504,6 +504,14 @@ export interface SmtpConfig {
   hasPassword?: boolean
 }
 
+/**
+ * Core settings → Mail (admins): the system mailbox for account emails such
+ * as password resets. `appUrl` is this web app's address, used in their links.
+ */
+export interface CoreMailConfig extends SmtpConfig {
+  appUrl: string
+}
+
 /* ------------------------------------------------------------------ */
 /* Workspace                                                           */
 /* ------------------------------------------------------------------ */

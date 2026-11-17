@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import {
   AlertCircleIcon,
   BriefcaseBusinessIcon,
@@ -44,7 +44,7 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const { register, handleSubmit, setValue, formState } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, formState, control } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   })
@@ -70,6 +70,7 @@ export function LoginScreen() {
     setError(null)
   }
 
+  const typedEmail = (useWatch({ control, name: "email" }) ?? "").trim()
   const pending = formState.isSubmitting
 
   return (
@@ -118,13 +119,22 @@ export function LoginScreen() {
               <Label className="text-sm font-normal text-muted-foreground">
                 <Checkbox defaultChecked /> Remember me
               </Label>
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => setError("Password reset isn't available in the demo.")}
-              >
-                Forgot password?
-              </button>
+              {isApiMode ? (
+                <Link
+                  href={`/forgot-password${typedEmail ? `?email=${encodeURIComponent(typedEmail)}` : ""}`}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Forgot password?
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setError("Password reset isn't available in the demo.")}
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
             <Button type="submit" size="lg" className="mt-1 h-9" disabled={pending}>
               {pending && <Loader2Icon className="animate-spin" />}
